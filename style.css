@@ -1,8 +1,17 @@
-input[type='number']::-webkit-inner-spin-button,
-    input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    .v-container { padding-bottom: 100px !important; }
-    .border { border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px; }
-    .mt-15 { margin-top: 40px; }
-    .table-sj th, .table-sj td { border: 1px solid #ddd; padding: 8px; }
+html,body { height:100%; margin:0; background:#f4f5f7; font-family: Roboto, Arial, sans-serif; }
+    /* Fix header spacing and ensure content isn't hidden under fixed app-bar */
+    .v-application--wrap { min-height: 100vh; }
+    .main-content { padding: 80px 12px 90px; } /* top padding for fixed app-bar, bottom for bottom nav */
+    @media (min-width: 960px) {
+      .main-content { padding: 96px 24px 24px; } /* desktop slightly different */
+    }
+    .table-sj th, .table-sj td { border:1px solid #ddd; padding:8px; }
     .table-sj { border-collapse: collapse; width: 100%; }
-    .table-header { background: #f5f5f5; }
+    .table-header { background:#f5f5f5; }
+    .audit-chip { min-width:120px; padding:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; }
+    .status-aman { background:#E6F4EA; color:#1B5E20; }
+    .status-warning { background:#FFF8E1; color:#8A6A00; }
+    .status-danger { background:#FFEBEE; color:#C62828; }
+    .small-muted { color:#666; font-size:0.9rem; }
+    /* make autocomplete / datatable full width on mobile */
+    .v-data-table { width: 100% !important; }
