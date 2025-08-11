@@ -23,237 +23,303 @@
 <body>
   <div id="app">
     <v-app>
-      <v-app-bar app color="primary" density="compact">
-        <v-app-bar-title class="text-center">{{ pageTitle }}</v-app-bar-title>
+      <!-- Fixed top app bar -->
+      <v-app-bar fixed app color="primary" dark elevation="2">
+        <v-row class="pa-0" align="center" style="width:100%">
+          <v-col cols="8" class="d-flex align-center">
+            <v-app-bar-title class="text-h6">{{ pageTitle }}</v-app-bar-title>
+          </v-col>
+
+          <!-- top menu (mobile friendly icons) -->
+          <v-col cols="4" class="d-flex justify-end">
+            <v-btn icon @click="currentPage='search'"><v-icon>mdi-magnify</v-icon></v-btn>
+            <v-btn icon @click="runAudit" :loading="isAuditing"><v-icon>mdi-shield-check</v-icon></v-btn>
+          </v-col>
+        </v-row>
       </v-app-bar>
 
-      <v-main style="background-color: #f4f5f7;">
-        <v-container fluid>
+      <v-main>
+        <div class="main-content">
+          <v-container fluid>
 
-          <!-- HALAMAN STOK -->
-          <div v-if="currentPage === 'stok'">
-            <v-card class="mb-4">
-              <v-card-title>Ringkasan Aset Gudang</v-card-title>
-              <v-list-item>
-                <v-list-item-title class="text-h6">Total Nilai Aset</v-list-item-title>
-                <template #append>
-                  <v-chip color="blue" size="large">{{ formatRupiah(laporan.totalNilaiAset) }}</v-chip>
-                </template>
-              </v-list-item>
-            </v-card>
+            <!-- STOK -->
+            <div v-if="currentPage === 'stok'">
+              <v-card class="mb-4">
+                <v-card-title>Ringkasan Aset Gudang</v-card-title>
+                <v-list-item>
+                  <v-list-item-title class="text-h6">Total Nilai Aset</v-list-item-title>
+                  <template #append><v-chip color="blue" size="large">{{ formatRupiah(laporan.totalNilaiAset) }}</v-chip></template>
+                </v-list-item>
+              </v-card>
 
-            <v-card>
-              <v-card-title class="d-flex align-center pe-2">
-                <v-text-field v-model="search" density="compact" label="Cari barang..." prepend-inner-icon="mdi-magnify" variant="solo-filled" flat hide-details single-line></v-text-field>
-                <v-btn color="success" class="ms-2" prepend-icon="mdi-file-excel" @click="exportStokToExcel">Export</v-btn>
-              </v-card-title>
-              <v-divider></v-divider>
+              <v-card>
+                <v-card-title class="d-flex align-center pe-2">
+                  <v-text-field v-model="search" density="compact" label="Cari barang..." prepend-inner-icon="mdi-magnify" variant="solo-filled" flat hide-details single-line></v-text-field>
+                  <v-btn color="success" class="ms-2" prepend-icon="mdi-file-excel" @click="exportStokToExcel">Export</v-btn>
+                </v-card-title>
+                <v-divider></v-divider>
 
-              <v-data-table :headers="barangHeaders" :items="barang" :search="search" :loading="isLoading" item-value="id">
-                <template #top>
-                  <v-btn color="primary" class="ma-2" @click="openDialog('tambah')" block>
-                    <v-icon left>mdi-plus</v-icon> Tambah Barang Baru
-                  </v-btn>
-                </template>
+                <v-data-table :headers="barangHeaders" :items="barang" :search="search" :loading="isLoading" item-value="id" dense>
+                  <template #top>
+                    <v-row>
+                      <v-col cols="12" sm="6">
+                        <v-btn color="primary" class="ma-2" @click="openDialog('tambah')" block><v-icon left>mdi-plus</v-icon>Tambah Barang</v-btn>
+                      </v-col>
+                    </v-row>
+                  </template>
 
-                <template #item.harga_satuan="{ item }">{{ formatRupiah(item.harga_satuan) }}</template>
-                <template #item.total_nilai="{ item }"><span class="font-weight-bold">{{ formatRupiah((item.stok || 0) * (item.harga_satuan || 0)) }}</span></template>
-                <template #item.actions="{ item }">
-                  <v-icon class="me-2" @click="openDialog('edit', item)" color="orange">mdi-pencil</v-icon>
-                  <v-icon @click="openDialog('hapus', item)" color="red">mdi-delete</v-icon>
-                </template>
-              </v-data-table>
-            </v-card>
-          </div>
+                  <template #item.harga_satuan="{ item }">{{ formatRupiah(item.harga_satuan) }}</template>
+                  <template #item.total_nilai="{ item }"><strong>{{ formatRupiah((item.stok||0)*(item.harga_satuan||0)) }}</strong></template>
+                  <template #item.actions="{ item }">
+                    <v-icon class="me-2" @click="openDialog('edit', item)" color="orange">mdi-pencil</v-icon>
+                    <v-icon @click="openDialog('hapus', item)" color="red">mdi-delete</v-icon>
+                  </template>
+                </v-data-table>
+              </v-card>
+            </div>
 
-          <!-- HALAMAN MASUK -->
-          <div v-if="currentPage === 'masuk'">
-            <v-card max-width="600" class="mx-auto">
-              <v-card-text class="pa-4">
-                <v-form @submit.prevent="catatTransaksi('MASUK')">
-                  <v-autocomplete v-model="formTransaksi.id" :items="barang" item-title="display" item-value="id" label="Pilih Barang" variant="outlined" :rules="[v => !!v || 'Barang harus dipilih']"></v-autocomplete>
-                  <v-text-field v-model.number="formTransaksi.jumlah" label="Jumlah Masuk" type="number" variant="outlined" :rules="[v => Number(v) > 0 || 'Jumlah harus lebih dari 0']"></v-text-field>
-                  <v-btn type="submit" color="primary" block :loading="isSubmitting">Simpan Transaksi</v-btn>
-                </v-form>
-              </v-card-text>
-            </v-card>
-          </div>
+            <!-- MASUK -->
+            <div v-if="currentPage === 'masuk'">
+              <v-card max-width="700" class="mx-auto">
+                <v-card-text>
+                  <v-form @submit.prevent="catatTransaksi('MASUK')">
+                    <v-autocomplete v-model="formTransaksi.id" :items="barang" item-title="display" item-value="id" label="Pilih Barang" variant="outlined" :rules="[v=>!!v||'Barang dipilih']"></v-autocomplete>
+                    <v-text-field v-model.number="formTransaksi.jumlah" label="Jumlah Masuk" type="number" variant="outlined"></v-text-field>
+                    <v-btn type="submit" color="primary" block :loading="isSubmitting">Simpan Transaksi</v-btn>
+                  </v-form>
+                </v-card-text>
+              </v-card>
+            </div>
 
-          <!-- HALAMAN KELUAR -->
-          <div v-if="currentPage === 'keluar'">
-            <v-card max-width="900" class="mx-auto">
-              <v-card-text class="pa-4">
-                <v-text-field v-model="formKeluar.tujuan" label="Tujuan Pengiriman" variant="outlined" :rules="[v => !!v || 'Tujuan harus diisi']"></v-text-field>
-                <v-divider class="my-4"></v-divider>
-
-                <v-row align="center">
-                  <v-col cols="12" md="6">
-                    <v-autocomplete v-model="itemKeluar.barang" :items="barang" :item-title="item => `${item.kode || ''} - ${item.nama || ''} (Stok: ${item.stok || 0})`" return-object label="Pilih Barang" variant="outlined" hide-details></v-autocomplete>
-                  </v-col>
-                  <v-col cols="12" md="4">
-                    <v-text-field v-model.number="itemKeluar.jumlah" label="Jumlah" type="number" variant="outlined" hide-details></v-text-field>
-                  </v-col>
-                  <v-col cols="12" md="2"><v-btn @click="tambahBarangKeDaftar" color="info" block>Tambah</v-btn></v-col>
-                </v-row>
-
-                <v-divider class="my-4"></v-divider>
-
-                <h3 class="mb-2">Daftar Barang Keluar</h3>
-                <v-list v-if="formKeluar.items.length > 0" lines="one">
-                  <v-list-item v-for="(item, index) in formKeluar.items" :key="index">
-                    <v-list-item-title>{{ item.kode || '' }} - {{ item.nama || '' }}</v-list-item-title>
-                    <v-list-item-subtitle>Jumlah: {{ item.jumlah }}</v-list-item-subtitle>
-                    <template #append>
-                      <v-btn icon variant="text" color="red" @click="hapusBarangDariDaftar(index)"><v-icon>mdi-delete</v-icon></v-btn>
-                    </template>
-                  </v-list-item>
-                </v-list>
-                <div v-else class="text-center text-grey my-4">Belum ada barang yang ditambahkan.</div>
-
-                <v-btn @click="catatTransaksiKeluar" color="primary" block :loading="isSubmitting" :disabled="formKeluar.items.length === 0 || !formKeluar.tujuan" class="mt-4">Simpan & Buat Surat Jalan</v-btn>
-              </v-card-text>
-            </v-card>
-          </div>
-
-          <!-- HALAMAN LAPORAN -->
-          <div v-if="currentPage === 'laporan'">
-            <v-card>
-              <v-card-text>
-                <v-row align="center">
-                  <v-col cols="12" sm="5"><v-text-field type="date" v-model="tanggalMulai" label="Dari Tanggal" density="compact" hide-details></v-text-field></v-col>
-                  <v-col cols="12" sm="5"><v-text-field type="date" v-model="tanggalSelesai" label="Sampai Tanggal" density="compact" hide-details></v-text-field></v-col>
-                  <v-col cols="12" sm="2"><v-btn @click="resetFilterTanggal" block variant="tonal">Reset</v-btn></v-col>
-                </v-row>
-              </v-card-text>
-
-              <v-divider></v-divider>
-              <v-card-title>Ringkasan Laporan (Sesuai Filter)</v-card-title>
-              <v-list>
-                <v-list-item><v-list-item-title class="text-green">Total Barang Datang</v-list-item-title><template #append><v-chip color="green">{{ laporan.totalMasuk }}</v-chip></template></v-list-item>
-                <v-list-item><v-list-item-title class="text-red">Total Barang Keluar</v-list-item-title><template #append><v-chip color="red">{{ laporan.totalKeluar }}</v-chip></template></v-list-item>
-              </v-list>
-
-              <v-divider></v-divider>
-              <v-card-title class="d-flex align-center">Detail Riwayat Transaksi<v-spacer></v-spacer><v-btn color="success" prepend-icon="mdi-file-excel" @click="exportLaporanToExcel">Export</v-btn></v-card-title>
-              <v-data-table :headers="riwayatHeaders" :items="filteredRiwayat" :loading="isLoading" item-value="id"></v-data-table>
-            </v-card>
-          </div>
-
-          <!-- HALAMAN SURAT JALAN LIST -->
-          <div v-if="currentPage === 'suratJalan'">
-            <v-card>
-              <v-card-title>Daftar Pengiriman Barang (Riwayat Keluar)</v-card-title>
-              <v-data-table :headers="suratJalanHeaders" :items="riwayatKeluar" :loading="isLoading" item-value="id">
-                <template #item.tanggal="{ item }">{{ item.tanggal }}</template>
-                <template #item.items="{ item }">{{ item.items.length }} item(s)</template>
-                <template #item.actions="{ item }">
-                  <v-btn color="primary" @click="lihatSuratJalan(item)" density="compact">Lihat SJ</v-btn>
-                  <v-btn color="success" class="ms-2" @click="exportSJtoPDF(item)">PDF</v-btn>
-                </template>
-              </v-data-table>
-            </v-card>
-          </div>
-
-          <!-- HALAMAN VIEW SURAT JALAN -->
-          <div v-if="currentPage === 'viewSJ'">
-            <v-card>
-              <div id="surat-jalan-content">
-                <v-card-text class="pa-8">
-                  <h2 class="text-center">SURAT JALAN</h2>
+            <!-- KELUAR -->
+            <div v-if="currentPage === 'keluar'">
+              <v-card max-width="860" class="mx-auto">
+                <v-card-text>
+                  <v-text-field v-model="formKeluar.tujuan" label="Tujuan Pengiriman" variant="outlined"></v-text-field>
                   <v-divider class="my-4"></v-divider>
                   <v-row>
-                    <v-col cols="6">
-                      <div><strong>No. Surat:</strong> SJ-{{ sjAktif.id ? sjAktif.id.slice(-6).toUpperCase() : '' }}</div>
-                      <div><strong>Tanggal:</strong> {{ sjAktif.tanggal }}</div>
+                    <v-col cols="12" md="6">
+                      <v-autocomplete v-model="itemKeluar.barang" :items="barang" :item-title="item=>`${item.kode||''} - ${item.nama||''} (Stok:${item.stok||0})`" return-object label="Pilih Barang" variant="outlined"></v-autocomplete>
                     </v-col>
-                    <v-col cols="6" class="text-right">
-                      <div><strong>Kepada Yth.</strong></div>
-                      <div class="font-weight-bold">{{ sjAktif.tujuan }}</div>
-                    </v-col>
+                    <v-col cols="12" md="4"><v-text-field v-model.number="itemKeluar.jumlah" label="Jumlah" type="number" variant="outlined"></v-text-field></v-col>
+                    <v-col cols="12" md="2"><v-btn @click="tambahBarangKeDaftar" color="info" block>Tambah</v-btn></v-col>
                   </v-row>
 
-                  <table class="mt-6 table-sj">
-                    <thead class="table-header">
-                      <tr>
-                        <th class="text-left">Kode Barang</th>
-                        <th class="text-left">Nama Barang</th>
-                        <th class="text-right">Jumlah</th>
-                        <th class="text-right">Harga Satuan</th>
-                        <th class="text-right">Total Nilai</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="item in (sjAktif.items || [])" :key="item.id">
-                        <td>{{ item.kode || '' }}</td>
-                        <td>{{ item.nama || '' }}</td>
-                        <td class="text-right">{{ item.jumlah || 0 }}</td>
-                        <td class="text-right">{{ formatRupiah(item.harga_satuan) }}</td>
-                        <td class="text-right">{{ formatRupiah((item.jumlah || 0) * (item.harga_satuan || 0)) }}</td>
-                      </tr>
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colspan="4" class="text-right font-weight-bold">Total Keseluruhan</td>
-                        <td class="text-right font-weight-bold">{{ formatRupiah(sjTotalNilai) }}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                  <v-divider class="my-4"></v-divider>
+                  <h3 class="mb-2">Daftar Barang Keluar</h3>
+                  <v-list v-if="formKeluar.items.length>0" lines="one">
+                    <v-list-item v-for="(it,idx) in formKeluar.items" :key="idx">
+                      <v-list-item-title>{{ it.kode }} - {{ it.nama }}</v-list-item-title>
+                      <v-list-item-subtitle>Jumlah: {{ it.jumlah }}</v-list-item-subtitle>
+                      <template #append><v-btn icon color="red" @click="hapusBarangDariDaftar(idx)"><v-icon>mdi-delete</v-icon></v-btn></template>
+                    </v-list-item>
+                  </v-list>
+                  <div v-else class="text-center small-muted">Belum ada barang yang ditambahkan.</div>
 
-                  <v-row class="text-center mt-15">
-                    <v-col><div>Hormat Kami,</div><div class="mt-15">(..................)</div></v-col>
-                    <v-col><div>Diterima Oleh,</div><div class="mt-15">(..................)</div></v-col>
+                  <v-btn class="mt-4" color="primary" block @click="catatTransaksiKeluar" :loading="isSubmitting" :disabled="formKeluar.items.length===0">Simpan & Buat Surat Jalan</v-btn>
+                </v-card-text>
+              </v-card>
+            </div>
+
+            <!-- LAPORAN -->
+            <div v-if="currentPage === 'laporan'">
+              <v-card>
+                <v-card-text>
+                  <v-row>
+                    <v-col cols="12" sm="5"><v-text-field type="date" v-model="tanggalMulai" label="Dari Tanggal" density="compact"></v-text-field></v-col>
+                    <v-col cols="12" sm="5"><v-text-field type="date" v-model="tanggalSelesai" label="Sampai Tanggal" density="compact"></v-text-field></v-col>
+                    <v-col cols="12" sm="2"><v-btn @click="resetFilterTanggal" block variant="tonal">Reset</v-btn></v-col>
                   </v-row>
                 </v-card-text>
-              </div>
+                <v-divider></v-divider>
+                <v-card-title>Ringkasan Laporan (Filter)</v-card-title>
+                <v-list>
+                  <v-list-item>
+                    <v-list-item-title class="text-green">Total Barang Datang</v-list-item-title>
+                    <template #append><v-chip color="green">{{ laporan.totalMasuk }}</v-chip></template>
+                  </v-list-item>
+                  <v-list-item>
+                    <v-list-item-title class="text-red">Total Barang Keluar</v-list-item-title>
+                    <template #append><v-chip color="red">{{ laporan.totalKeluar }}</v-chip></template>
+                  </v-list-item>
+                </v-list>
+                <v-divider></v-divider>
+                <v-card-title class="d-flex align-center">Detail Riwayat Transaksi<v-spacer></v-spacer><v-btn color="success" prepend-icon="mdi-file-excel" @click="exportLaporanToExcel">Export</v-btn></v-card-title>
+                <v-data-table :headers="riwayatHeaders" :items="filteredRiwayat" dense :loading="isLoading"></v-data-table>
+              </v-card>
+            </div>
 
-              <v-card-actions class="pa-4">
-                <v-btn color="grey" @click="kembaliKeSjList">Kembali</v-btn>
-                <v-spacer></v-spacer>
-                <v-btn color="primary" @click="downloadSjDocx">Download DOC</v-btn>
-                <v-btn color="success" class="ms-2" @click="downloadSjPdf">Download PDF</v-btn>
-              </v-card-actions>
-            </v-card>
-          </div>
+            <!-- SURAT JALAN -->
+            <div v-if="currentPage === 'suratJalan'">
+              <v-card>
+                <v-card-title>Daftar Pengiriman Barang (Riwayat Keluar)</v-card-title>
+                <v-data-table :headers="suratJalanHeaders" :items="riwayatKeluar" dense :loading="isLoading">
+                  <template #item.tanggal="{ item }">{{ item.tanggal }}</template>
+                  <template #item.items="{ item }">{{ item.items.length }} item(s)</template>
+                  <template #item.actions="{ item }">
+                    <v-btn color="primary" @click="lihatSuratJalan(item)">Lihat SJ</v-btn>
+                    <v-btn color="success" class="ms-2" @click="exportSJtoPDF(item)">PDF</v-btn>
+                  </template>
+                </v-data-table>
+              </v-card>
+            </div>
 
-        </v-container>
+            <!-- VIEW SJ -->
+            <div v-if="currentPage === 'viewSJ'">
+              <v-card>
+                <div id="surat-jalan-content">
+                  <v-card-text>
+                    <h2 class="text-center">SURAT JALAN</h2>
+                    <v-divider class="my-4"></v-divider>
+                    <v-row>
+                      <v-col cols="6">
+                        <div><strong>No. Surat:</strong> SJ-{{ sjAktif.id ? sjAktif.id.slice(-6).toUpperCase() : '' }}</div>
+                        <div><strong>Tanggal:</strong> {{ sjAktif.tanggal }}</div>
+                      </v-col>
+                      <v-col cols="6" class="text-right">
+                        <div><strong>Kepada Yth.</strong></div>
+                        <div class="font-weight-bold">{{ sjAktif.tujuan }}</div>
+                      </v-col>
+                    </v-row>
+
+                    <table class="mt-6 table-sj">
+                      <thead class="table-header">
+                        <tr>
+                          <th>Kode Barang</th>
+                          <th>Nama Barang</th>
+                          <th style="text-align:right">Jumlah</th>
+                          <th style="text-align:right">Harga Satuan</th>
+                          <th style="text-align:right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="it in (sjAktif.items||[])" :key="it.id">
+                          <td>{{ it.kode }}</td>
+                          <td>{{ it.nama }}</td>
+                          <td style="text-align:right">{{ it.jumlah }}</td>
+                          <td style="text-align:right">{{ formatRupiah(it.harga_satuan) }}</td>
+                          <td style="text-align:right">{{ formatRupiah((it.jumlah||0)*(it.harga_satuan||0)) }}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colspan="4" style="text-align:right;font-weight:bold">Total Keseluruhan</td>
+                          <td style="text-align:right;font-weight:bold">{{ formatRupiah(sjTotalNilai) }}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+
+                    <v-row class="text-center mt-15">
+                      <v-col><div>Hormat Kami</div><div class="mt-15">(..................)</div></v-col>
+                      <v-col><div>Diterima Oleh</div><div class="mt-15">(..................)</div></v-col>
+                    </v-row>
+                  </v-card-text>
+                </div>
+
+                <v-card-actions>
+                  <v-btn color="grey" @click="kembaliKeSjList">Kembali</v-btn>
+                  <v-spacer></v-spacer>
+                  <v-btn color="primary" @click="downloadSjDocx">Download DOC</v-btn>
+                  <v-btn color="success" @click="downloadSjPdf">Download PDF</v-btn>
+                </v-card-actions>
+              </v-card>
+            </div>
+
+            <!-- AUDIT -->
+            <div v-if="currentPage === 'audit'">
+              <v-card>
+                <v-card-title class="d-flex align-center">
+                  <div>
+                    <div class="text-h6">Audit Otomatis</div>
+                    <div class="small-muted">Periksa stok < 0, transaksi keluar sebelum masuk, SJ hilang</div>
+                  </div>
+                  <v-spacer></v-spacer>
+                  <v-btn color="primary" @click="runAudit" :loading="isAuditing" class="me-2">Jalankan Audit</v-btn>
+                  <v-btn color="success" @click="downloadAuditPdf" :disabled="auditResults.length===0">Download PDF</v-btn>
+                </v-card-title>
+
+                <v-card-text>
+                  <v-row class="mb-4">
+                    <v-col cols="12" sm="4"><div class="audit-chip status-danger"><div><strong>Masalah Serius</strong></div><div style="font-weight:bold">{{ counts.red }}</div></div></v-col>
+                    <v-col cols="12" sm="4"><div class="audit-chip status-warning"><div><strong>Perlu Dicek</strong></div><div style="font-weight:bold">{{ counts.yellow }}</div></div></v-col>
+                    <v-col cols="12" sm="4"><div class="audit-chip status-aman"><div><strong>Aman</strong></div><div style="font-weight:bold">{{ counts.green }}</div></div></v-col>
+                  </v-row>
+
+                  <v-data-table :headers="auditHeaders" :items="auditResults" dense item-value="id">
+                    <template #item.status="{ item }">
+                      <v-chip :class="item.statusClass" small>{{ item.statusLabel }}</v-chip>
+                    </template>
+                  </v-data-table>
+                </v-card-text>
+              </v-card>
+            </div>
+
+            <!-- Simple search page (optional) -->
+            <div v-if="currentPage === 'search'">
+              <v-card>
+                <v-card-title>Pencarian Cepat</v-card-title>
+                <v-card-text>
+                  <v-text-field v-model="search" label="Cari barang / kode / nama" append-icon="mdi-magnify"></v-text-field>
+                  <v-data-table :headers="barangHeaders" :items="barang.filter(b=>b.kode?.includes(search) || b.nama?.toLowerCase().includes(search.toLowerCase()))" dense></v-data-table>
+                </v-card-text>
+              </v-card>
+            </div>
+
+          </v-container>
+        </div>
       </v-main>
 
-      <!-- Navigasi Bawah -->
-      <v-bottom-navigation v-model="navValue" grow app>
-        <v-btn value="stok" @click="currentPage = 'stok'"><v-icon>mdi-package-variant-closed</v-icon><span>Stok</span></v-btn>
-        <v-btn value="masuk" @click="currentPage = 'masuk'"><v-icon>mdi-arrow-bottom-left-bold-outline</v-icon><span>Masuk</span></v-btn>
-        <v-btn value="keluar" @click="currentPage = 'keluar'"><v-icon>mdi-arrow-top-right-bold-outline</v-icon><span>Keluar</span></v-btn>
-        <v-btn value="suratJalan" @click="currentPage = 'suratJalan'"><v-icon>mdi-truck-delivery-outline</v-icon><span>Surat Jalan</span></v-btn>
-        <v-btn value="laporan" @click="currentPage = 'laporan'"><v-icon>mdi-clipboard-list-outline</v-icon><span>Laporan</span></v-btn>
+      <!-- Bottom navigation (mobile friendly) -->
+      <v-bottom-navigation v-model="navValue" grow app fixed>
+        <v-btn value="stok" @click="currentPage='stok'"><v-icon>mdi-package-variant-closed</v-icon><span>Stok</span></v-btn>
+        <v-btn value="masuk" @click="currentPage='masuk'"><v-icon>mdi-arrow-bottom-left-bold-outline</v-icon><span>Masuk</span></v-btn>
+        <v-btn value="keluar" @click="currentPage='keluar'"><v-icon>mdi-arrow-top-right-bold-outline</v-icon><span>Keluar</span></v-btn>
+        <v-btn value="suratJalan" @click="currentPage='suratJalan'"><v-icon>mdi-truck-delivery-outline</v-icon><span>SJ</span></v-btn>
+        <v-btn value="laporan" @click="currentPage='laporan'"><v-icon>mdi-clipboard-list-outline</v-icon><span>Laporan</span></v-btn>
+        <v-btn value="audit" @click="currentPage='audit'"><v-icon>mdi-shield-check</v-icon><span>Audit</span></v-btn>
       </v-bottom-navigation>
 
-      <!-- Dialog Tambah/Edit/Hapus -->
+      <!-- Dialog Add/Edit/Delete -->
       <v-dialog v-model="dialog" max-width="500px">
         <v-card>
-          <v-card-title><span class="text-h5">{{ dialogTitle }}</span></v-card-title>
+          <v-card-title><span class="text-h6">{{ dialogTitle }}</span></v-card-title>
           <v-card-text v-if="dialogMode !== 'hapus'">
             <v-text-field v-model="editedItem.kode" label="Kode Barang (SKU)"></v-text-field>
             <v-text-field v-model="editedItem.nama" label="Nama Barang"></v-text-field>
             <v-text-field v-model.number="editedItem.harga_satuan" label="Harga Satuan" type="number" prefix="Rp"></v-text-field>
-            <v-text-field v-model.number="editedItem.stok" label="Stok Awal" type="number" :disabled="dialogMode === 'edit'"></v-text-field>
+            <v-text-field v-model.number="editedItem.stok" label="Stok Awal" type="number" :disabled="dialogMode==='edit'"></v-text-field>
           </v-card-text>
-          <v-card-text v-else class="text-center">Yakin mau hapus barang <strong>{{ editedItem.nama || '' }}</strong>?</v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="secondary" @click="closeDialog">Batal</v-btn>
-            <v-btn :color="dialogMode === 'hapus' ? 'error' : 'primary'" @click="simpanDialog">{{ dialogMode === 'hapus' ? 'Hapus' : 'Simpan' }}</v-btn>
-          </v-card-actions>
+          <v-card-text v-else class="text-center">Yakin mau hapus <strong>{{ editedItem.nama }}</strong>?</v-card-text>
+          <v-card-actions><v-spacer></v-spacer><v-btn color="secondary" @click="closeDialog">Batal</v-btn><v-btn :color="dialogMode==='hapus'?'error':'primary'" @click="simpanDialog">{{ dialogMode==='hapus'?'Hapus':'Simpan' }}</v-btn></v-card-actions>
         </v-card>
       </v-dialog>
 
-      <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="2000">{{ snackbar.text }}</v-snackbar>
+      <!-- Audit serious modal -->
+      <v-dialog v-model="showAuditAlert" max-width="800">
+        <v-card>
+          <v-card-title class="text-h6">⚠️ Audit: Masalah Serius Ditemukan</v-card-title>
+          <v-card-text>
+            <div>Jumlah isu serius: <strong>{{ counts.red }}</strong></div>
+            <v-list two-line>
+              <v-list-item v-for="(it,idx) in auditResults.filter(a=>a.level==='red')" :key="idx">
+                <v-list-item-content>
+                  <v-list-item-title v-html="it.reference"></v-list-item-title>
+                  <v-list-item-subtitle>{{ it.masalah }}</v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+          <v-card-actions><v-spacer></v-spacer><v-btn color="primary" @click="showAuditAlert=false">Tutup</v-btn></v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">{{ snackbar.text }}</v-snackbar>
     </v-app>
   </div>
 
   <!-- Vue & Vuetify -->
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.10/dist/vuetify.min.js"></script>
-
   <script type="module" src="main.js">
     
   </script>
